@@ -215,7 +215,7 @@ def test_increase_product_quantity():
     assert data["id"] == product_id
     assert data["quantity"] == 8
     
-def test_create_order():
+def test_create_order(monkeypatch):
     product_response = client.post(
         "/products/",
         json={
@@ -229,6 +229,33 @@ def test_create_order():
     assert product_response.status_code == 200
 
     product_id = product_response.json()["id"]
+
+    class MockProductClient:
+        def get_product(self, product_id):
+            return {
+                "id": product_id,
+                "name": "Order Test Product",
+                "description": "Product for order testing",
+                "price": 2000,
+                "quantity": 10
+            }
+
+        def reduce_quantity(self, product_id, quantity):
+            return {
+                "id": product_id,
+                "quantity": 10 - quantity
+            }
+
+        def increase_quantity(self, product_id, quantity):
+            return {
+                "id": product_id,
+                "quantity": 10 + quantity
+            }
+
+    monkeypatch.setattr(
+        "app.orders.api.orders.order_service.product_client",
+        MockProductClient()
+    )
 
     order_response = client.post(
         "/orders/",
@@ -244,4 +271,3 @@ def test_create_order():
 
     assert order_data["product_id"] == product_id
     assert order_data["quantity"] == 2
-    
