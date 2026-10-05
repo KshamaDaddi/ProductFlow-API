@@ -215,7 +215,7 @@ def test_increase_product_quantity():
     assert data["id"] == product_id
     assert data["quantity"] == 8
     
-def test_create_order(monkeypatch):
+def test_create_order():
     product_response = client.post(
         "/products/",
         json={
@@ -252,22 +252,36 @@ def test_create_order(monkeypatch):
                 "quantity": 10 + quantity
             }
 
-    monkeypatch.setattr(
-        "app.orders.api.orders.order_service.product_client",
-        MockProductClient()
-    )
+    mock_product_client = MockProductClient()
 
-    order_response = client.post(
-        "/orders/",
-        json={
-            "product_id": product_id,
-            "quantity": 2
-        }
-    )
+    def mock_order_service():
+        from app.orders.repository.order_repository import OrderRepository
+        from app.orders.services.order_service import OrderService
 
-    assert order_response.status_code == 200
+        return OrderService(
+            repository=OrderRepository(),
+            product_client=mock_product_client
+        )
 
-    order_data = order_response.json()
+    from app.orders.api.orders import get_order_service
 
-    assert order_data["product_id"] == product_id
-    assert order_data["quantity"] == 2
+    app.dependency_overrides[get_order_service] = mock_order_service
+
+    try:
+        order_response = client.post(
+            "/orders/",
+            json={
+                "product_id": product_id,
+                "quantity": 2
+            }
+        )
+
+        assert order_response.status_code == 200
+
+        order_data = order_response.json()
+
+        assert order_data["product_id"] == product_id
+        assert order_data["quantity"] == 2
+
+    finally:
+        app.dependency_overrides.clear()

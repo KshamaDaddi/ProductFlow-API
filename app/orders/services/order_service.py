@@ -1,15 +1,20 @@
+
 from sqlalchemy.orm import Session
 
 from app.orders.models.order import Order
-from app.orders.repository.order_repository import OrderRepository
-from app.orders.services.product_client import ProductClient
+from app.orders.interfaces.order_repository import OrderRepositoryInterface
+from app.orders.interfaces.product_client import ProductClientInterface
 
 
 class OrderService:
 
-    def __init__(self):
-        self.repository = OrderRepository()
-        self.product_client = ProductClient()
+    def __init__(
+        self,
+        repository: OrderRepositoryInterface,
+        product_client: ProductClientInterface
+    ):
+        self.repository = repository
+        self.product_client = product_client
 
     def get_all_orders(self, db: Session):
         return self.repository.get_all(db)
@@ -60,3 +65,4 @@ class OrderService:
         self.repository.delete(db, existing_order)
 
         return True
+
